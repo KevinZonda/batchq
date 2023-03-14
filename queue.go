@@ -7,6 +7,7 @@ type BatchQ[T any] struct {
 	n         int
 	resultMap Map[JobResult[T]]
 	stopChan  chan bool
+	dur       time.Duration
 }
 
 func NewBatchQ[T any]() *BatchQ[T] {
@@ -60,7 +61,7 @@ func (q *BatchQ[T]) StartBlock() {
 				jobs = nil
 				go q.process(j)
 			}
-		case <-time.After(1 * time.Second):
+		case <-time.After(q.dur): // FIXME: starving
 			if len(jobs) > 0 {
 				j := jobs
 				jobs = nil
