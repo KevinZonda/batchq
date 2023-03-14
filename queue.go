@@ -50,22 +50,31 @@ func (q *BatchQ[T]) process(jobs []Job[T]) {
 
 func (q *BatchQ[T]) StartBlock() {
 	var jobs []Job[T]
+	firstTime := time.Now()
+	f := func() {
+		if len(jobs) > 0 {
+			j := jobs
+			jobs = nil
+			go q.process(j)
+		}
+	}
 	for {
 		select {
 		case <-q.stopChan:
 			return
 		case job := <-q.jobChan:
+			if len(jobs) == 0 {
+				firstTime = time.Now()
+			}
 			jobs = append(jobs, job)
 			if len(jobs) == q.n {
-				j := jobs
-				jobs = nil
-				go q.process(j)
+				f()
 			}
-		case <-time.After(q.dur): // FIXME: starving
-			if len(jobs) > 0 {
-				j := jobs
-				jobs = nil
-				go q.process(j)
+		case <-time.After(q.dur):
+			f()
+		default:
+			if time.Since(firstTime) > q.dur {
+				f()
 			}
 		}
 	}
