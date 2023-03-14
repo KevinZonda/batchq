@@ -5,7 +5,7 @@ import "time"
 type BatchQ[T any] struct {
 	jobChan   chan Job[T]
 	n         int
-	resultMap Map[JobResult[T]]
+	resultMap Map[T]
 	stopChan  chan bool
 	dur       time.Duration
 }
