@@ -52,6 +52,7 @@ func (q *BatchQ[T]) process(jobs []Job[T]) {
 }
 
 func (q *BatchQ[T]) StartBlock() {
+	q.resultMap.Start()
 	var jobs []Job[T]
 	firstTime := time.Now()
 	f := func() {
@@ -64,6 +65,7 @@ func (q *BatchQ[T]) StartBlock() {
 	for {
 		select {
 		case <-q.stopChan:
+			q.resultMap.Stop()
 			return
 		case job := <-q.jobChan:
 			if len(jobs) == 0 {
