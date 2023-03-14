@@ -45,7 +45,10 @@ func (q *BatchQ[T]) process(jobs []Job[T]) {
 	} else {
 		multi = jobs[0].Combine(jobs[1:])
 	}
-	multi.Do()
+	rst := multi.Do()
+	for hash, result := range rst {
+		q.resultMap.Set(hash, result)
+	}
 }
 
 func (q *BatchQ[T]) StartBlock() {
