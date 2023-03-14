@@ -3,8 +3,9 @@ package batchq
 import "time"
 
 type BatchQ[T any] struct {
-	jobChan chan Job[T]
-	n       int
+	jobChan   chan Job[T]
+	n         int
+	resultMap Map[JobResult[T]]
 }
 
 func NewBatchQ[T any]() *BatchQ[T] {
@@ -15,8 +16,11 @@ func (q *BatchQ[T]) Start() {
 
 }
 
-func (q *BatchQ[T]) Check(hash string) bool {
-	return false
+func (q *BatchQ[T]) Check(hash string) (found bool, result JobResult[T]) {
+	if result, found := q.resultMap.Get(hash); found {
+		return true, result
+	}
+	return false, result
 }
 
 func (q *BatchQ[T]) Add(job Job[T]) string {

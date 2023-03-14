@@ -4,14 +4,14 @@ type Job[T any] interface {
 	Combine(jobs []Job[T]) MultiJob[T]
 	Hash() string
 	SetHash(hash string)
-	Do() T
+	Do() JobResult[T]
 }
 
 type MultiJob[T any] interface {
 	Combine(jobs []Job[T]) MultiJob[T]
 	Hash() string
 	SetHash(hash string)
-	Do() map[string]T
+	Do() map[string]JobResult[T]
 }
 
 type MultiJobBase[T any] struct {
@@ -31,8 +31,8 @@ func (m *MultiJobBase[T]) SetHash(hash string) {
 	m.hash = hash
 }
 
-func (m *MultiJobBase[T]) Do() map[string]T {
-	return map[string]T{m.Hash(): m.job.Do()}
+func (m *MultiJobBase[T]) Do() map[string]JobResult[T] {
+	return map[string]JobResult[T]{m.Hash(): m.job.Do()}
 }
 
 var _ MultiJob[int] = (*MultiJobBase[int])(nil)
