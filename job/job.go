@@ -1,4 +1,4 @@
-package batchq
+package job
 
 type Job[T any] interface {
 	Combine(jobs []Job[T]) MultiJob[T]

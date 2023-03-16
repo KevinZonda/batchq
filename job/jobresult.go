@@ -1,4 +1,4 @@
-package batchq
+package job
 
 import "time"
 

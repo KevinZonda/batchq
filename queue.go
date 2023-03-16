@@ -1,18 +1,22 @@
 package batchq
 
-import "time"
+import (
+	"github.com/KevinZonda/batchq/job"
+	"github.com/KevinZonda/batchq/map"
+	"time"
+)
 
 type BatchQ[T any] struct {
-	jobChan   chan Job[T]
+	jobChan   chan job.Job[T]
 	n         int
-	resultMap Map[T]
+	resultMap _map.Map[T]
 	stopChan  chan bool
 	dur       time.Duration
 }
 
-func NewBatchQ[T any](numToBatch int, resultMap Map[T], unitTime time.Duration) *BatchQ[T] {
+func NewBatchQ[T any](numToBatch int, resultMap _map.Map[T], unitTime time.Duration) *BatchQ[T] {
 	return &BatchQ[T]{
-		jobChan:   make(chan Job[T]),
+		jobChan:   make(chan job.Job[T]),
 		n:         numToBatch,
 		resultMap: resultMap,
 		stopChan:  make(chan bool),
@@ -22,9 +26,9 @@ func NewBatchQ[T any](numToBatch int, resultMap Map[T], unitTime time.Duration) 
 
 func NewBatchQEasy[T any](numToBatch int, unitTime time.Duration) *BatchQ[T] {
 	return &BatchQ[T]{
-		jobChan:   make(chan Job[T]),
+		jobChan:   make(chan job.Job[T]),
 		n:         numToBatch,
-		resultMap: NewMapBase[T](),
+		resultMap: _map.NewMapBase[T](),
 		stopChan:  make(chan bool),
 		dur:       unitTime,
 	}
@@ -34,14 +38,14 @@ func (q *BatchQ[T]) Start() {
 	go q.StartBlock()
 }
 
-func (q *BatchQ[T]) Check(hash string) (found bool, result JobResult[T]) {
+func (q *BatchQ[T]) Check(hash string) (found bool, result job.JobResult[T]) {
 	if result, found := q.resultMap.Get(hash); found {
 		return true, result
 	}
 	return false, result
 }
 
-func (q *BatchQ[T]) Add(job Job[T]) string {
+func (q *BatchQ[T]) Add(job job.Job[T]) string {
 	q.jobChan <- job
 	return job.Hash()
 }
@@ -54,10 +58,10 @@ func (q *BatchQ[T]) SetBatchSize(n int) {
 	q.n = n
 }
 
-func (q *BatchQ[T]) process(jobs []Job[T]) {
-	var multi MultiJob[T]
+func (q *BatchQ[T]) process(jobs []job.Job[T]) {
+	var multi job.MultiJob[T]
 	if len(jobs) == 1 {
-		multi = Wrap[T](jobs[0])
+		multi = job.Wrap[T](jobs[0])
 	} else {
 		multi = jobs[0].Combine(jobs[1:])
 	}
@@ -69,7 +73,7 @@ func (q *BatchQ[T]) process(jobs []Job[T]) {
 
 func (q *BatchQ[T]) StartBlock() {
 	q.resultMap.Start()
-	var jobs []Job[T]
+	var jobs []job.Job[T]
 	firstTime := time.Now()
 	f := func() {
 		if len(jobs) > 0 {
