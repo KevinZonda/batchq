@@ -10,8 +10,24 @@ type BatchQ[T any] struct {
 	dur       time.Duration
 }
 
-func NewBatchQ[T any]() *BatchQ[T] {
-	return &BatchQ[T]{}
+func NewBatchQ[T any](numToBatch int, resultMap Map[T], unitTime time.Duration) *BatchQ[T] {
+	return &BatchQ[T]{
+		jobChan:   make(chan Job[T]),
+		n:         numToBatch,
+		resultMap: resultMap,
+		stopChan:  make(chan bool),
+		dur:       unitTime,
+	}
+}
+
+func NewBatchQEasy[T any](numToBatch int, unitTime time.Duration) *BatchQ[T] {
+	return &BatchQ[T]{
+		jobChan:   make(chan Job[T]),
+		n:         numToBatch,
+		resultMap: NewMapBase[T](),
+		stopChan:  make(chan bool),
+		dur:       unitTime,
+	}
 }
 
 func (q *BatchQ[T]) Start() {
