@@ -17,23 +17,25 @@ type BatchQ[T any] struct {
 	canAppend func(origin []job.Job[T], newOne job.Job[T]) bool
 }
 
-func NewBatchQ[T any](numToBatch int, resultMap _map.Map[T], unitTime time.Duration) *BatchQ[T] {
+func NewBatchQ[T any](numToBatch int, resultMap _map.Map[T], unitTime time.Duration, canAppend func(origin []job.Job[T], newOne job.Job[T]) bool) *BatchQ[T] {
 	return &BatchQ[T]{
 		jobChan:   make(chan job.Job[T]),
 		n:         numToBatch,
 		resultMap: resultMap,
 		stopChan:  make(chan bool),
 		dur:       unitTime,
+		canAppend: canAppend,
 	}
 }
 
-func NewBatchQEasy[T any](numToBatch int, unitTime time.Duration) *BatchQ[T] {
+func NewBatchQEasy[T any](numToBatch int, unitTime time.Duration, canAppend func(origin []job.Job[T], newOne job.Job[T]) bool) *BatchQ[T] {
 	return &BatchQ[T]{
 		jobChan:   make(chan job.Job[T]),
 		n:         numToBatch,
 		resultMap: _map.NewMapBase[T](),
 		stopChan:  make(chan bool),
 		dur:       unitTime,
+		canAppend: canAppend,
 	}
 }
 
