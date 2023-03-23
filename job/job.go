@@ -5,6 +5,7 @@ type Job[T any] interface {
 	Hash() string
 	SetHash(hash string)
 	Do() JobResult[T]
+	CanCombine(j Job[T]) bool
 }
 
 type MultiJob[T any] interface {
@@ -12,6 +13,7 @@ type MultiJob[T any] interface {
 	Hash() string
 	SetHash(hash string)
 	Do() map[string]JobResult[T]
+	CanCombine(j Job[T]) bool
 }
 
 type MultiJobBase[T any] struct {
@@ -33,6 +35,10 @@ func (m *MultiJobBase[T]) SetHash(hash string) {
 
 func (m *MultiJobBase[T]) Do() map[string]JobResult[T] {
 	return map[string]JobResult[T]{m.Hash(): m.job.Do()}
+}
+
+func (m *MultiJobBase[T]) CanCombine(_ Job[T]) bool {
+	return true
 }
 
 var _ MultiJob[int] = (*MultiJobBase[int])(nil)
