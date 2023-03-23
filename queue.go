@@ -55,6 +55,10 @@ func (q *BatchQ[T]) Add(job job.Job[T]) string {
 	return job.Hash()
 }
 
+func (q *BatchQ[T]) RemoveResult(hash string) {
+	q.resultMap.Remove(hash)
+}
+
 func (q *BatchQ[T]) Stop() {
 	q.stopChan <- true
 }
