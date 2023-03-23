@@ -8,7 +8,6 @@ import (
 
 type BatchQ[T any] struct {
 	jobChan   chan job.Job[T]
-	n         int
 	resultMap _map.Map[T]
 	stopChan  chan bool
 	dur       time.Duration
@@ -17,10 +16,12 @@ type BatchQ[T any] struct {
 	canAppend func(origin []job.Job[T], newOne job.Job[T]) bool
 }
 
-func NewBatchQ[T any](numToBatch int, resultMap _map.Map[T], unitTime time.Duration, canAppend func(origin []job.Job[T], newOne job.Job[T]) bool) *BatchQ[T] {
+func NewBatchQ[T any](resultMap _map.Map[T], unitTime time.Duration, canAppend func(origin []job.Job[T], newOne job.Job[T]) bool) *BatchQ[T] {
+	if canAppend == nil {
+		canAppend = NewCountConstraint[T](10)
+	}
 	return &BatchQ[T]{
 		jobChan:   make(chan job.Job[T]),
-		n:         numToBatch,
 		resultMap: resultMap,
 		stopChan:  make(chan bool),
 		dur:       unitTime,
@@ -28,10 +29,12 @@ func NewBatchQ[T any](numToBatch int, resultMap _map.Map[T], unitTime time.Durat
 	}
 }
 
-func NewBatchQEasy[T any](numToBatch int, unitTime time.Duration, canAppend func(origin []job.Job[T], newOne job.Job[T]) bool) *BatchQ[T] {
+func NewBatchQEasy[T any](unitTime time.Duration, canAppend func(origin []job.Job[T], newOne job.Job[T]) bool) *BatchQ[T] {
+	if canAppend == nil {
+		canAppend = NewCountConstraint[T](10)
+	}
 	return &BatchQ[T]{
 		jobChan:   make(chan job.Job[T]),
-		n:         numToBatch,
 		resultMap: _map.NewMapBase[T](),
 		stopChan:  make(chan bool),
 		dur:       unitTime,
@@ -61,10 +64,6 @@ func (q *BatchQ[T]) RemoveResult(hash string) {
 
 func (q *BatchQ[T]) Stop() {
 	q.stopChan <- true
-}
-
-func (q *BatchQ[T]) SetBatchSize(n int) {
-	q.n = n
 }
 
 func (q *BatchQ[T]) process(jobs []job.Job[T]) {
@@ -99,18 +98,16 @@ func (q *BatchQ[T]) StartBlock() {
 		case jobC := <-q.jobChan:
 			if len(jobs) == 0 {
 				firstTime = time.Now()
+				jobs = append(jobs, jobC)
+				continue
 			}
-			if q.canAppend != nil && len(jobs) > 0 {
-				if !q.canAppend(jobs, jobC) {
-					f()
-					jobs = []job.Job[T]{jobC}
-					continue
-				}
+			// jobs > 0
+			if !q.canAppend(jobs, jobC) {
+				f()
+				jobs = []job.Job[T]{jobC}
+				continue
 			}
 			jobs = append(jobs, jobC)
-			if len(jobs) == q.n {
-				f()
-			}
 		case <-time.After(q.dur):
 			f()
 		default:
@@ -118,5 +115,11 @@ func (q *BatchQ[T]) StartBlock() {
 				f()
 			}
 		}
+	}
+}
+
+func NewCountConstraint[T any](maxCount int) func(origin []job.Job[T], newOne job.Job[T]) bool {
+	return func(origin []job.Job[T], newOne job.Job[T]) bool {
+		return len(origin) < maxCount
 	}
 }
