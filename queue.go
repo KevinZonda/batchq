@@ -12,6 +12,9 @@ type BatchQ[T any] struct {
 	resultMap _map.Map[T]
 	stopChan  chan bool
 	dur       time.Duration
+	// canAppend Can append this job to origin jobs?
+	// if false, will start a new job list
+	canAppend func(origin []job.Job[T], newOne job.Job[T]) bool
 }
 
 func NewBatchQ[T any](numToBatch int, resultMap _map.Map[T], unitTime time.Duration) *BatchQ[T] {
@@ -87,11 +90,18 @@ func (q *BatchQ[T]) StartBlock() {
 		case <-q.stopChan:
 			q.resultMap.Stop()
 			return
-		case job := <-q.jobChan:
+		case jobC := <-q.jobChan:
 			if len(jobs) == 0 {
 				firstTime = time.Now()
 			}
-			jobs = append(jobs, job)
+			if q.canAppend != nil && len(jobs) > 0 {
+				if !q.canAppend(jobs, jobC) {
+					f()
+					jobs = []job.Job[T]{jobC}
+					continue
+				}
+			}
+			jobs = append(jobs, jobC)
 			if len(jobs) == q.n {
 				f()
 			}
