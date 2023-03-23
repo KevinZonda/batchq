@@ -24,6 +24,7 @@ type MapBase[T any] struct {
 	super cmap.ConcurrentMap[string, job.JobResult[T]]
 	stop  chan bool
 	dur   time.Duration
+	gc    bool
 }
 
 func (m *MapBase[T]) Get(key string) (job.JobResult[T], bool) {
@@ -48,6 +49,10 @@ func (m *MapBase[T]) Start() {
 		case <-m.stop:
 			return
 		default:
+			if !m.gc {
+				time.Sleep(time.Millisecond * 100)
+				continue
+			}
 			for _, key := range m.super.Keys() {
 				if value, found := m.super.Get(key); found {
 					if value == nil {
@@ -58,6 +63,7 @@ func (m *MapBase[T]) Start() {
 						m.super.Remove(key)
 					}
 				}
+				time.Sleep(time.Millisecond * 100)
 			}
 		}
 	}
@@ -67,10 +73,12 @@ func (m *MapBase[T]) Stop() {
 	m.stop <- true
 }
 
-func NewMapBase[T any]() *MapBase[T] {
+func NewMapBase[T any](gc bool) *MapBase[T] {
 	return &MapBase[T]{
 		super: cmap.New[job.JobResult[T]](),
 		stop:  make(chan bool),
+		gc:    gc,
+		dur:   time.Minute * 10,
 	}
 }
 

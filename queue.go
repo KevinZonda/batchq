@@ -35,7 +35,7 @@ func NewBatchQEasy[T any](unitTime time.Duration, canAppend func(origin []job.Jo
 	}
 	return &BatchQ[T]{
 		jobChan:   make(chan job.Job[T]),
-		resultMap: _map.NewMapBase[T](),
+		resultMap: _map.NewMapBase[T](true),
 		stopChan:  make(chan bool),
 		dur:       unitTime,
 		canAppend: canAppend,
