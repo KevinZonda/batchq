@@ -27,7 +27,7 @@ func (q *BatchQ[T]) WaitResult(hash string, interval time.Duration) (result T, e
 	return result, jr.Error()
 }
 
-func (q *BatchQ[T]) WaitJobResultChain(hash string, interval time.Duration) <-chan job.JobResult[T] {
+func (q *BatchQ[T]) WaitJobResultChannel(hash string, interval time.Duration) <-chan job.JobResult[T] {
 	ch := make(chan job.JobResult[T])
 	go func() {
 		ch <- q.WaitJobResult(hash, interval)
@@ -40,7 +40,7 @@ var ErrTimeout = errors.New("timeout")
 
 func (q *BatchQ[T]) WaitJobResultWithTimeout(hash string, interval, timout time.Duration) (result job.JobResult[T], err error) {
 	select {
-	case result = <-q.WaitJobResultChain(hash, interval):
+	case result = <-q.WaitJobResultChannel(hash, interval):
 		return
 	case <-time.After(timout):
 		err = ErrTimeout
