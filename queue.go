@@ -1,9 +1,10 @@
 package batchq
 
 import (
-	"github.com/KevinZonda/batchq/job"
-	"github.com/KevinZonda/batchq/map"
 	"time"
+
+	"github.com/KevinZonda/batchq/job"
+	_map "github.com/KevinZonda/batchq/map"
 )
 
 type BatchQ[T any] struct {
@@ -21,9 +22,9 @@ func NewBatchQ[T any](resultMap _map.Map[T], unitTime time.Duration, canAppend f
 		canAppend = NewCountConstraint[T](10)
 	}
 	return &BatchQ[T]{
-		jobChan:   make(chan job.Job[T]),
+		jobChan:   make(chan job.Job[T], 100),
 		resultMap: resultMap,
-		stopChan:  make(chan bool),
+		stopChan:  make(chan bool, 1),
 		dur:       unitTime,
 		canAppend: canAppend,
 	}
@@ -34,9 +35,9 @@ func NewBatchQEasy[T any](unitTime time.Duration, canAppend func(origin []job.Jo
 		canAppend = NewCountConstraint[T](10)
 	}
 	return &BatchQ[T]{
-		jobChan:   make(chan job.Job[T]),
+		jobChan:   make(chan job.Job[T], 100),
 		resultMap: _map.NewMapBase[T](true),
-		stopChan:  make(chan bool),
+		stopChan:  make(chan bool, 1),
 		dur:       unitTime,
 		canAppend: canAppend,
 	}
@@ -66,6 +67,10 @@ func (q *BatchQ[T]) Stop() {
 	q.stopChan <- true
 }
 
+func (q *BatchQ[T]) QueueLength() int {
+	return len(q.jobChan)
+}
+
 func (q *BatchQ[T]) process(jobs []job.Job[T]) {
 	var multi job.MultiJob[T]
 	if len(jobs) == 1 {
@@ -80,7 +85,7 @@ func (q *BatchQ[T]) process(jobs []job.Job[T]) {
 }
 
 func (q *BatchQ[T]) StartBlock() {
-	q.resultMap.Start()
+	go q.resultMap.Start()
 	var jobs []job.Job[T]
 	firstTime := time.Now()
 	f := func() {
