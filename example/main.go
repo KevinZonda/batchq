@@ -5,20 +5,36 @@ import (
 	"github.com/KevinZonda/batchq"
 	"github.com/KevinZonda/batchq/job"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"runtime/pprof"
 	"time"
 )
 
 var q *batchq.BatchQ[string]
 
 func main() {
+	startPprof := false
+	var err error
+	if startPprof {
+		f, err := os.Create("/Users/kevin/pprof")
+		if err = pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		go func() {
+			time.Sleep(10 * time.Second)
+			pprof.StopCPUProfile()
+			fmt.Println("stop cpu profile")
+		}()
+	}
 	q = batchq.NewBatchQEasy[string](8*time.Second, batchq.NewCountConstraint[string](3))
 
 	q.Start()
 	http.HandleFunc("/", post)
 
-	err := http.ListenAndServe("127.0.0.1:3306", nil)
+	err = http.ListenAndServe("127.0.0.1:3306", nil)
 	if err != nil {
 		fmt.Println(err)
 	}

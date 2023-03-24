@@ -85,7 +85,7 @@ func (q *BatchQ[T]) process(jobs []job.Job[T]) {
 }
 
 func (q *BatchQ[T]) StartBlock() {
-	go q.resultMap.Start()
+	//go q.resultMap.Start()
 	var jobs []job.Job[T]
 	firstTime := time.Now()
 	f := func() {
@@ -113,12 +113,11 @@ func (q *BatchQ[T]) StartBlock() {
 				continue
 			}
 			jobs = append(jobs, jobC)
-		case <-time.After(q.dur):
-			f()
 		default:
 			if time.Since(firstTime) > q.dur {
 				f()
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
