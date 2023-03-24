@@ -38,18 +38,18 @@ func (q *BatchQ[T]) WaitJobResultChain(hash string, interval time.Duration) <-ch
 
 var ErrTimeout = errors.New("timeout")
 
-func (q *BatchQ[T]) WaitJobResultWithTimeout(hash string, interval time.Duration) (result job.JobResult[T], err error) {
+func (q *BatchQ[T]) WaitJobResultWithTimeout(hash string, interval, timout time.Duration) (result job.JobResult[T], err error) {
 	select {
 	case result = <-q.WaitJobResultChain(hash, interval):
 		return
-	case <-time.After(5 * time.Second):
+	case <-time.After(timout):
 		err = ErrTimeout
 	}
 	return
 }
 
-func (q *BatchQ[T]) WaitResultWithTimeout(hash string, interval time.Duration) (result T, err error) {
-	jr, err := q.WaitJobResultWithTimeout(hash, interval)
+func (q *BatchQ[T]) WaitResultWithTimeout(hash string, interval, timout time.Duration) (result T, err error) {
+	jr, err := q.WaitJobResultWithTimeout(hash, interval, timout)
 	if err != nil {
 		return
 	}
